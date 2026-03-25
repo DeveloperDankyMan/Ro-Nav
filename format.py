@@ -15,6 +15,8 @@ class Ref:
 
 
 class FormatRegistry:
+    _VERSION =  3
+    
     def __init__(self):
         self._formats = {}
         self.Ref = Ref()
@@ -111,7 +113,7 @@ class FormatRegistry:
     # Version helper
     def GE_VER(self, ver, on_true, on_false):
         def compat_fn(ctx):
-            return on_true if ctx.version >= ver else on_false
+            return on_true if ctx.get("version") >= ver else on_false # return on_true if ctx.version >= ver else on_false
         return self.compat(compat_fn)
 
 
@@ -124,12 +126,6 @@ F = FormatRegistry()
 # --------------------------------------------------------
 # Define formats (translated from Lua)
 # --------------------------------------------------------
-
-F.new("Vector3", F.struct([
-    {"x", F.Int},
-    {"y": F.Int},
-    {"z": F.Int}
-]))
 
 F.new("Challenge", F.struct([
     {"signature": F.array(16, F.Byte)},
