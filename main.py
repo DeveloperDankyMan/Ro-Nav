@@ -443,7 +443,7 @@ def mesh_generate(req: Request, res: Response):
     barriers_raw = mesh_data.get("barriers", [])
     c_conns_raw = mesh_data.get("c_conns", [])
 
-    generated = generate_navmesh(name, points_raw, surfaces_raw, barriers_raw, params)
+    generated = generate_navmesh(mesh_data, params)
 
     print("----- GENERATED MESH OUTPUT -----")
     print(json.dumps(generated, indent=4))
