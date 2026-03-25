@@ -385,11 +385,11 @@ def generate_navmesh(mesh_data: Dict, params: Dict) -> Dict:
             if dist <= max_walk_dist and pa["ptype"] == 1 and pb["ptype"] == 1:
                 blocked = any(box.swept_aabb(a_v, b_v, radius, height) for box in barrier_aabbs)
                 if not blocked:
-                    out_connections.append({"action":0, "fromID":pa["id"], "toID":pb["id"], **_conn_defaults()})
+                    out_connections.append({"action":0, "fromID":pa["id"], "toID":pb["id"]}) # out_connections.append({"action":0, "fromID":pa["id"], "toID":pb["id"], **_conn_defaults()})
                     continue
             # jump connection
             if can_jump(a_v, b_v, jumpPower, gravity, walkSpeed, radius, height, barrier_aabbs):
-                out_connections.append({"action":1, "fromID":pa["id"], "toID":pb["id"], **_conn_defaults()})
+                out_connections.append({"action":1, "fromID":pa["id"], "toID":pb["id"]}) # out_connections.append({"action":1, "fromID":pa["id"], "toID":pb["id"], **_conn_defaults()})
 
     # c_conns: preserve input c_conns and also expose empty list if none
     out_c_conns = synthesize_c_conns(out_connections, out_points, c_conns_in, radius * 2)
