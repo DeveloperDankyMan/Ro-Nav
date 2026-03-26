@@ -1,66 +1,47 @@
-from format import F
-from types import SimpleNamespace
 from http_module import req
-
 import json
-import util
-import main
 import requests
 
-from util import _F_string_save, read_s, i2b
+# ---------------------------------------------------------
+# Biological Mind Test Payload
+# ---------------------------------------------------------
 
+payload = {
+    "brain": {
+        "neurons": [
+            {"id": 1, "activation": 0.0, "bias": 0.0, "plasticity": 0.1, "trace": 0.0, "type": "sensory"},
+            {"id": 2, "activation": 0.0, "bias": 0.1, "plasticity": 0.1, "trace": 0.0, "type": "hidden"},
+            {"id": 3, "activation": 0.0, "bias": 0.0, "plasticity": 0.1, "trace": 0.0, "type": "motor"}
+        ],
 
-class Ctx(dict):
-    @property
-    def version(self):
-        return self.get("version", 0)
+        "synapses": [
+            {"from": 1, "to": 2, "weight": 0.8, "eligibility": 0.0, "plasticity": 0.05},
+            {"from": 2, "to": 3, "weight": 1.2, "eligibility": 0.0, "plasticity": 0.05}
+        ],
 
-context = Ctx(version=3)
+        "hippocampus": {
+            "episodes": [],
+            "max_size": 2000
+        },
 
+        "modulators": {
+            "dopamine": 0.0,
+            "acetylcholine": 0.6,
+            "norepinephrine": 0.1
+        }
+    },
 
-# sample data
-params = {
-    "jumpPower": 50,
-    "walkSpeed": 25,
+    "inputs": {
+        "1": 1.0
+    },
+
+    "dt": 1.0
 }
-mesh = {
-    "Name": "ExampleMesh",
-    "Visible": True,
 
-    "points": [
-        {"id": 1, "v3": [0.0, 0.0, 0.0], "ptype": 1},
-        {"id": 2, "v3": [10.0, 0.0, 0.0], "ptype": 1},
-        {"id": 3, "v3": [10.0, 0.0, 10.0], "ptype": 1},
-        {"id": 4, "v3": [0.0, 0.0, 10.0], "ptype": 1},
-    ],
+# ---------------------------------------------------------
+# Response handler (same style as your mesh handler)
+# ---------------------------------------------------------
 
-    "surfaces": [
-        [1, 2, 3],
-        [1, 3, 4]
-    ],
-
-    "c_conns": [],
-    "barriers": [],
-    "connections": []
-}
-
-context = Ctx(version=3)
-data_chunks = []
-util.save(data_chunks, {"params": params, "mesh": mesh}, F.MeshReq, context)
-payload_bytes = b"".join(data_chunks)
-
-print("chunks count:", len(data_chunks))
-for i, c in enumerate(data_chunks):
-    print(i, type(c), len(c))
-payload_bytes = b"".join(data_chunks)
-print("total bytes:", len(payload_bytes))
-
-print("payload_bytes length:", len(payload_bytes))
-print("payload_bytes (hex, first 128 bytes):", payload_bytes[:128].hex())
-
-load_ctx = Ctx(version=3)
-loaded_obj, new_index = util.load(payload_bytes, 0, F.MeshReq, {"version": 3})
-print(loaded_obj, new_index)
 def handler(res: requests.Response, node):
     if res is None:
         print("network error:", node["response"])
@@ -70,59 +51,28 @@ def handler(res: requests.Response, node):
         print("Failed:", res.status_code, res.text)
         return
 
-    text = res.text or ""
-
-    # Try JSON first
+    # Try JSON
     try:
         obj = res.json()
-        if "mesh" in obj:
-            status = obj.get("status")
-            mesh = obj.get("mesh")
-            print("Server returned JSON mesh response.")
-            print("status:", obj.get("status"))
-            print("mesh:", json.dumps(mesh, indent=4))
+        if "brain" in obj:
+            print("Biological Mind Response:")
+            print(json.dumps(obj, indent=4))
             return
     except Exception:
-        pass  # not JSON, fall through to binary handling
+        pass
 
-    # Binary fallback
-    if len(text) <= len(payload_bytes):
-        print("Server did not return encoded mesh data.")
-        print("Response was:", text)
-        return
+    print("Unexpected response:", res.text)
 
-    encoded_part = text[len(payload_bytes):]
 
-    try:
-        raw = util.decode(encoded_part)
-    except Exception as exc:
-        print("decode failed:", exc)
-        print("encoded_part length:", len(encoded_part))
-        print("encoded_part (hex, first 128 bytes):", encoded_part[:128].encode().hex())
-        return
-
-    try:
-        save_obj, _ = util.load(raw, 0, F.MeshSave, {"version": 3})
-    except Exception as exc:
-        print("load failed:", exc)
-        return
-
-    print("received mesh version:", save_obj.get("version"))
-    print("node keys:", list(node.keys()))
+# ---------------------------------------------------------
+# Send request using your req() wrapper
+# ---------------------------------------------------------
 
 response = req({
-    "Url": "http://127.0.0.1:5000/mesh/generate",
+    "Url": "http://127.0.0.1:5000/biological/neural",
     "Method": "POST",
-    "Body": json.dumps(loaded_obj),
+    "Body": json.dumps(payload),
     "handler": handler
 })
 
 response()
-
-# res = requests.post("http://127.0.0.1:5000/mesh/generate", json=loaded_obj)
-
-# print(res.text)
-
-# if res.ok:
-#     raw = res.json()
-#     print(raw)
