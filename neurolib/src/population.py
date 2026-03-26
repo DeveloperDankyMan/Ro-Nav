@@ -1,7 +1,7 @@
 import math
 import random
-from Neuro.genetics import Genetics
-from Neuro.NeuralNet import NeuralNet
+from .genetics import Genetics
+from .NeuralNet import NeuralNet
 
 
 class Population:

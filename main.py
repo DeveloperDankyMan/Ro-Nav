@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Tuple, Optional
 from enum import Enum
 from collections import defaultdict
 
+from neurolib import neuro
 from expy import expy, Request, Response
 from format import F
 
@@ -645,12 +646,94 @@ def mesh_generate(req: Request, res: Response):
         "meta": meta
     })
 
-def biological_intelligence(req: Request, res: Response):
-    pass
+# ---------------------------
+# Neural Network Endpoint
+# ---------------------------
+def nn(req: Request, res: Response):
+    body = getattr(req, "json", {}) or {}
+    action = body.get("action")
+
+    try:
+        # CREATE NETWORK
+        if action == "create":
+            cfg = body.get("network", {})
+            net = neuro.new(
+                "network",
+                cfg.get("numInputs", 1),
+                cfg.get("numOutputs", 1),
+                cfg.get("numHiddenLayers", 1),
+                cfg.get("neuronsPerHiddenLayer", 4)
+            )
+            return res.json({
+                "status": "ok",
+                "weights": net.get_weights(),
+                "numWeights": net.get_number_of_weights()
+            })
+
+        # EVALUATE NETWORK
+        if action == "evaluate":
+            cfg = body.get("network", {})
+            inputs = body.get("inputs", [])
+
+            net = neuro.new(
+                "network",
+                cfg.get("numInputs", 1),
+                cfg.get("numOutputs", 1),
+                cfg.get("numHiddenLayers", 1),
+                cfg.get("neuronsPerHiddenLayer", 4)
+            )
+
+            if "weights" in cfg:
+                net.put_weights(list(cfg["weights"]))
+
+            outputs = net.evaluate(inputs)
+
+            return res.json({
+                "status": "ok",
+                "outputs": outputs
+            })
+
+        # EVOLVE POPULATION
+        if action == "evolve":
+            pop_cfg = body.get("population", {})
+            size = pop_cfg.get("size", 10)
+            net_cfg = pop_cfg.get("net", {})
+            fitness_list = pop_cfg.get("fitness", [])
+
+            pop = neuro.new("population")
+
+            for _ in range(size):
+                brain = neuro.new(
+                    "network",
+                    net_cfg.get("numInputs", 1),
+                    net_cfg.get("numOutputs", 1),
+                    net_cfg.get("numHiddenLayers", 1),
+                    net_cfg.get("neuronsPerHiddenLayer", 4)
+                )
+                pop.add_brain(brain)
+
+            for i, f in enumerate(fitness_list):
+                if i < len(pop.brains):
+                    pop.brains[i].fitness = float(f)
+
+            pop.evolve()
+
+            evolved = [b.get_weights() for b in pop.brains]
+
+            return res.json({
+                "status": "ok",
+                "generation": pop.generation,
+                "brains": evolved
+            })
+
+        return res.json({"status": "error", "error": "Unknown action"})
+
+    except Exception as exc:
+        return res.json({"status": "error", "error": str(exc)})
 
 app.get("/", home)
 app.post("/mesh/generate", mesh_generate)
-app.post("/biological/intelligence", biological_intelligence)
+app.post("/nn", nn)
 
 if __name__ == "__main__":
     try: 
